@@ -29,6 +29,7 @@ Read `docs/superpowers/specs/2026-07-17-redtag-design.md` before changing produc
 Run the applicable subset during development and the full set before marking a PR ready:
 
 ```powershell
+. ./scripts/invoke-checked.ps1
 pnpm format:check
 pnpm lint
 pnpm typecheck
