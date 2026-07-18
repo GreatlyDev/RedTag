@@ -1,0 +1,36 @@
+name: Feature request
+description: Propose a focused product or engineering change.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the real-world problem without prescribing a solution.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome and acceptance evidence
+    validations:
+      required: true
+  - type: dropdown
+    id: boundary
+    attributes:
+      label: Safety-sensitive boundary
+      options:
+        - Matching or result meaning
+        - Provider routing or source data
+        - Privacy or security
+        - Visual or interaction only
+        - Engineering infrastructure only
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+    validations:
+      required: true
