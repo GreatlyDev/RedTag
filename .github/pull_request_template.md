@@ -31,7 +31,7 @@
 
 ## Provider or fixture provenance
 
-<!-- Record provider, source URL, captured-at metadata, and hash when applicable. -->
+<!-- Record provider, a sanitized canonical official-source URL with no identifiers, sensitive query parameters, or temporary tokens, captured-at metadata, and hash when applicable. -->
 
 ## Deployment and rollback
 
@@ -41,7 +41,7 @@
 ## Self-review
 
 - [ ] I reviewed the full diff, including generated and configuration files.
-- [ ] I added tests before behavioral implementation.
+- [ ] I added tests before behavioral implementation, or this PR contains no behavioral change.
 - [ ] Failures and incomplete retrieval cannot become `no_match_found`.
 - [ ] Logs, traces, cache keys, and cache values contain no sensitive identifiers.
 - [ ] User-facing copy preserves provider limitations and avoids safety clearance.

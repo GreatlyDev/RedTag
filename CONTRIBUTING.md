@@ -11,7 +11,7 @@
 5. Push early and open a draft pull request.
 6. Complete the PR template, self-review the full diff, and attach verification evidence.
 7. Mark ready only after required checks pass.
-8. Merge with a merge commit and delete the branch.
+8. Merge with a merge commit and delete the branch. Squash is limited to automated dependency updates or deliberately collapsed housekeeping; rebase merges are not allowed.
 
 Normal feature PRs usually contain two to four meaningful commits. One atomic documentation change remains one commit. Do not split commits to manufacture activity.
 
