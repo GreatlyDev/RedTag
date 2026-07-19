@@ -2,7 +2,6 @@ import type {
   AssistanceMode,
   DataMode,
   ModelState,
-  ProviderId,
   RetrievalStatus,
 } from "../providers";
 import type {

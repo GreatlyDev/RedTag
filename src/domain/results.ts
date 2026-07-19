@@ -45,8 +45,6 @@ interface DecisionBase<P extends ProviderId> {
   readonly dataMode: DataMode;
 }
 
-type MatchProviderId = Exclude<ProviderId, "nhtsa">;
-
 type CpscDecisionBase = DecisionBase<"cpsc"> & {
   readonly providerProductEntryId: string;
 };
