@@ -1,0 +1,10 @@
+.next
+node_modules
+playwright-report
+test-results
+pnpm-lock.yaml
+public/icons/*.png
+public/sw.js
+scripts/invoke-checked.ps1
+docs/engineering/
+docs/superpowers/

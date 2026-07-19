@@ -1,0 +1,76 @@
+:root {
+  --paper: #f5f0e7;
+  --surface: #fffdf8;
+  --ink: #1f2925;
+  --muted: #6d746d;
+  --line: #d9d1c4;
+  --sage: #486154;
+  --sage-soft: #dfe9df;
+  --neutral-info: #53646b;
+  --neutral-info-soft: #e3e9ea;
+  --amber: #8a6422;
+  --amber-ink: #6d4b12;
+  --amber-soft: #f2dfb8;
+  --recall: #b9473d;
+  --recall-ink: #8f2f29;
+  --recall-soft: #f3dcd7;
+  --focus: #184d66;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-control: 12px;
+  --radius-card: 18px;
+  --radius-hero: 24px;
+  --shadow-elevated: 0 12px 36px rgba(31, 41, 37, 0.08);
+  color-scheme: light;
+  font-family: var(--font-body), Inter, system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--paper);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

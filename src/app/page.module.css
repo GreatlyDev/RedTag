@@ -1,0 +1,60 @@
+.shell {
+  width: min(100%, 76rem);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+.masthead {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+.wordmark {
+  color: var(--ink);
+  font-family: var(--font-display), "Iowan Old Style", Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.scope,
+.eyebrow {
+  color: var(--neutral-info);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.hero {
+  display: grid;
+  min-height: calc(100vh - 5rem);
+  align-content: center;
+  gap: var(--space-4);
+  max-width: 48rem;
+}
+.hero h1 {
+  max-width: 13ch;
+  margin: 0;
+  font-family: var(--font-display), "Iowan Old Style", Georgia, serif;
+  font-size: clamp(2.4rem, 9vw, 5.5rem);
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+}
+.hero p {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--neutral-info);
+  font-size: 1.08rem;
+  line-height: 1.55;
+}
+.hero button {
+  width: fit-content;
+  min-height: 3.25rem;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 750;
+}
