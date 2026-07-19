@@ -1,5 +1,8 @@
 import {
+  ASSISTANCE_MODES,
   assertValidRetrievalStatus,
+  DATA_MODES,
+  MODEL_STATES,
   type ProviderId,
   type RetrievalStatus,
 } from "../providers";
@@ -71,6 +74,38 @@ function hasOnlyZeroCounts(summary: ScanSummary): boolean {
   );
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function assertNoMatchSummary(value: unknown): asserts value is ScanSummary {
+  if (!isRecord(value) || value.state !== "no_match_found") {
+    throw new Error("No-match copy requires a real no-match summary");
+  }
+  if (
+    !Array.isArray(value.decisionIds) ||
+    value.decisionIds.length !== 0 ||
+    !value.decisionIds.every((id) => typeof id === "string") ||
+    value.summaryRuleVersion !== "summary-v1" ||
+    !MODEL_STATES.includes(value.modelState as never) ||
+    !ASSISTANCE_MODES.includes(value.assistanceMode as never) ||
+    !DATA_MODES.includes(value.dataMode as never) ||
+    (value.modelState === "model_unavailable" &&
+      value.assistanceMode !== "manual_mode")
+  ) {
+    throw new Error("No-match copy requires a real no-match summary");
+  }
+  if (!hasOnlyZeroCounts(value as unknown as ScanSummary)) {
+    throw new Error("No-match copy requires exhaustive zero decision counts");
+  }
+  assertValidRetrievalStatus(value.retrieval);
+  if (!hasCompleteRetrieval(value.retrieval)) {
+    throw new Error(
+      "No-match copy requires complete retrieval with named completed sources",
+    );
+  }
+}
+
 export function assertAppCopyAllowed(copy: string): void {
   const copyWithoutRequiredDisclaimer = copy
     .split(REQUIRED_NO_MATCH_DISCLAIMER)
@@ -88,25 +123,7 @@ export function formatNoMatchCopy(
   summary: ScanSummary,
   retrievedAt: Date,
 ): string {
-  if (summary.state !== "no_match_found" || summary.decisionIds.length > 0) {
-    throw new Error("No-match copy requires a real no-match summary");
-  }
-
-  if (!hasOnlyZeroCounts(summary)) {
-    throw new Error("No-match copy requires exhaustive zero decision counts");
-  }
-
-  assertValidRetrievalStatus(summary.retrieval);
-
-  if (
-    !hasCompleteRetrieval(summary.retrieval) ||
-    new Set(summary.retrieval.fullyCompletedProviderIds).size !==
-      summary.retrieval.fullyCompletedProviderIds.length
-  ) {
-    throw new Error(
-      "No-match copy requires complete retrieval with named completed sources",
-    );
-  }
+  assertNoMatchSummary(summary);
 
   if (Number.isNaN(retrievedAt.getTime())) {
     throw new Error("No-match copy requires a valid retrieval timestamp");

@@ -253,6 +253,38 @@ describe("app-authored safety copy", () => {
     ).toThrow(/no-match summary/);
   });
 
+  it.each([
+    ["a string decision ID list", ""],
+    ["a length-shaped decision ID object", { length: 0 }],
+    ["a null decision ID list", null],
+    ["a missing decision ID list", undefined],
+    ["a non-string decision ID", [42]],
+  ])("refuses %s", (_label, decisionIds) => {
+    const summary = noMatchSummary();
+    const malformed = { ...summary, decisionIds };
+    if (decisionIds === undefined)
+      delete (malformed as { decisionIds?: unknown }).decisionIds;
+
+    expect(() => formatNoMatchCopy(malformed as never, new Date())).toThrow(
+      /no-match summary/,
+    );
+  });
+
+  it.each([
+    ["model state", { modelState: "other" }],
+    ["assistance mode", { assistanceMode: "other" }],
+    ["data mode", { dataMode: "other" }],
+    ["rule version", { summaryRuleVersion: "other" }],
+    [
+      "unavailable assisted axes",
+      { modelState: "model_unavailable", assistanceMode: "assisted" },
+    ],
+  ])("refuses malformed summary %s", (_label, patch) => {
+    expect(() =>
+      formatNoMatchCopy({ ...noMatchSummary(), ...patch } as never, new Date()),
+    ).toThrow(/no-match summary/);
+  });
+
   it("refuses invalid retrieval counts and timestamps", () => {
     const summary = noMatchSummary();
 
