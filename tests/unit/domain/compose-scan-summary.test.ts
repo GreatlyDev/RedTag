@@ -94,6 +94,39 @@ function decision(
   };
 }
 
+function fdaDecision(): RecordDecision {
+  return {
+    id: "fda-decision",
+    provider: "fda_food",
+    result: "confirmed_match",
+    providerRecordId: "fda-record",
+    sourceUrl: "https://example.gov/fda-record",
+    matchedFields: [
+      {
+        kind: "lot_batch",
+        userValue: "LOT-1",
+        officialValue: "LOT-1",
+        provenance: {
+          provider: "fda_food",
+          sourceField: "code_info",
+          span: { start: 0, end: 5 },
+          productLineSegmentId: "line-1",
+          parserRule: "lot-token-v1",
+        },
+      },
+    ],
+    conflictingFields: [],
+    unknownFields: [],
+    ruleVersion: "foundation-v1",
+    limitations: [],
+    allowedActions: ["open_official_source"],
+    retrieval: completeRetrieval,
+    modelState: "model_ready",
+    assistanceMode: "assisted",
+    dataMode: "current_query",
+  };
+}
+
 describe("composeScanSummary", () => {
   it("keeps the workflow not evaluated when no provider completed", () => {
     const summary = composeScanSummary({
@@ -490,5 +523,182 @@ describe("composeScanSummary", () => {
     expect(summary.decisionIds).toEqual(["confirmed"]);
     expect(input.decisions).toBe(decisions);
     expect(input.retrieval).toBe(retrieval);
+  });
+
+  it.each([
+    [
+      "forged NHTSA confirmation",
+      {
+        ...decision("nhtsa", "vehicle_campaigns_found"),
+        result: "confirmed_match",
+      },
+    ],
+    [
+      "forged CPSC vehicle campaign",
+      {
+        ...decision("cpsc", "confirmed_match"),
+        result: "vehicle_campaigns_found",
+      },
+    ],
+    [
+      "unknown provider",
+      { ...decision("unknown-provider", "confirmed_match"), provider: "other" },
+    ],
+    [
+      "unknown result",
+      { ...decision("unknown-result", "confirmed_match"), result: "other" },
+    ],
+  ])("rejects %s runtime decision discriminants", (_label, forged) => {
+    expect(() =>
+      composeScanSummary({
+        decisions: [forged as unknown as RecordDecision],
+        retrieval: completeRetrieval,
+        modelState: "model_ready",
+        assistanceMode: "assisted",
+        dataMode: "current_query",
+      }),
+    ).toThrow(/decision/);
+  });
+
+  it("rejects CPSC evidence joined across product entries", () => {
+    const cpsc = decision("cross-entry", "confirmed_match");
+    const forged = {
+      ...cpsc,
+      matchedFields: [
+        {
+          ...cpsc.matchedFields[0],
+          provenance: {
+            provider: "cpsc",
+            sourceField: "products.model_number",
+            productEntryId: "other-entry",
+          },
+        },
+      ],
+    };
+
+    expect(() =>
+      composeScanSummary({
+        decisions: [forged as unknown as RecordDecision],
+        retrieval: completeRetrieval,
+        modelState: "model_ready",
+        assistanceMode: "assisted",
+        dataMode: "current_query",
+      }),
+    ).toThrow(/product entry/);
+  });
+
+  it("rejects FDA evidence crossed between product-line segments", () => {
+    const fda = fdaDecision();
+    const forged = {
+      ...fda,
+      conflictingFields: [
+        {
+          ...fda.matchedFields[0]!,
+          provenance: {
+            ...fda.matchedFields[0]!.provenance,
+            productLineSegmentId: "line-2",
+          },
+        },
+      ],
+    };
+
+    expect(() =>
+      composeScanSummary({
+        decisions: [forged as unknown as RecordDecision],
+        retrieval: completeRetrieval,
+        modelState: "model_ready",
+        assistanceMode: "assisted",
+        dataMode: "current_query",
+      }),
+    ).toThrow(/product-line segment/);
+  });
+
+  it.each([
+    ["invalid FDA span", { span: { start: 4, end: 4 } }],
+    ["wrong FDA provenance", { provider: "cpsc" }],
+  ])("rejects %s", (_label, provenance) => {
+    const fda = fdaDecision();
+    const forged = {
+      ...fda,
+      matchedFields: [{ ...fda.matchedFields[0], provenance }],
+    };
+
+    expect(() =>
+      composeScanSummary({
+        decisions: [forged as unknown as RecordDecision],
+        retrieval: completeRetrieval,
+        modelState: "model_ready",
+        assistanceMode: "assisted",
+        dataMode: "current_query",
+      }),
+    ).toThrow(/FDA/);
+  });
+
+  it.each([
+    [
+      "NHTSA action on CPSC",
+      {
+        ...decision("bad-action", "confirmed_match"),
+        allowedActions: ["open_nhtsa_vin_lookup"],
+      },
+    ],
+    [
+      "non-leading NHTSA lookup",
+      {
+        ...decision("nhtsa-action", "vehicle_campaigns_found"),
+        allowedActions: ["open_official_source", "open_nhtsa_vin_lookup"],
+      },
+    ],
+    [
+      "invalid decision retrieval",
+      {
+        ...decision("bad-retrieval", "confirmed_match"),
+        retrieval: { ...completeRetrieval, requiredQueries: 0.5 },
+      },
+    ],
+    [
+      "unknown identifier kind",
+      { ...decision("bad-kind", "confirmed_match"), unknownFields: ["other"] },
+    ],
+    [
+      "possible reason on confirmed result",
+      {
+        ...decision("bad-reason", "confirmed_match"),
+        possibleMatchReason: "user_evidence_missing",
+      },
+    ],
+  ])("rejects %s", (_label, forged) => {
+    expect(() =>
+      composeScanSummary({
+        decisions: [forged as unknown as RecordDecision],
+        retrieval: completeRetrieval,
+        modelState: "model_ready",
+        assistanceMode: "assisted",
+        dataMode: "current_query",
+      }),
+    ).toThrow(/decision|retrieval|actions|identifier/i);
+  });
+
+  it.each([
+    ["an unknown completed provider", { fullyCompletedProviderIds: ["other"] }],
+    ["a non-boolean cap flag", { capped: "false" }],
+  ])("rejects a decision retrieval with %s", (_label, retrievalPatch) => {
+    expect(() =>
+      composeScanSummary({
+        decisions: [
+          {
+            ...decision("malformed-retrieval", "confirmed_match"),
+            retrieval: {
+              ...completeRetrieval,
+              ...retrievalPatch,
+            },
+          } as unknown as RecordDecision,
+        ],
+        retrieval: completeRetrieval,
+        modelState: "model_ready",
+        assistanceMode: "assisted",
+        dataMode: "current_query",
+      }),
+    ).toThrow(/retrieval/i);
   });
 });

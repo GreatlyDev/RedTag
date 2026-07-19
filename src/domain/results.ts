@@ -7,11 +7,13 @@ import type {
   RetrievalStatus,
 } from "./providers";
 
-export type ResultDecision =
-  | "confirmed_match"
-  | "possible_match"
-  | "identifier_conflict"
-  | "vehicle_campaigns_found";
+export const RESULT_DECISIONS = [
+  "confirmed_match",
+  "possible_match",
+  "identifier_conflict",
+  "vehicle_campaigns_found",
+] as const;
+export type ResultDecision = (typeof RESULT_DECISIONS)[number];
 
 export type ScanState =
   | "not_evaluated"

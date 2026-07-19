@@ -37,6 +37,12 @@ describe("app-authored safety copy", () => {
     "CPSC approved",
     "CPSC–approved",
     "Approved by FDA",
+    "Approved by the FDA",
+    "Food and Drug Administration approved",
+    "Consumer Product Safety Commission approved",
+    "National Highway Traffic Safety Administration approved",
+    "government approved",
+    "agency-approved",
     "This VIN has an open recall.",
     "VIN 1HGCM82633A004352 has no open recalls.",
     "There is an open recall on this VIN.",
@@ -85,6 +91,77 @@ describe("app-authored safety copy", () => {
     expect(() => assertAppCopyAllowed("CPSC—approved")).toThrow(
       /Prohibited app-authored copy/,
     );
+    expect(() => assertAppCopyAllowed("AI\u058Averified")).toThrow(
+      /Prohibited app-authored copy/,
+    );
+    expect(() => assertAppCopyAllowed("sa\u200bfe")).toThrow(
+      /Prohibited app-authored copy/,
+    );
+    expect(() =>
+      assertAppCopyAllowed(
+        "This does not establish that the product is sa\u200bfe or unaffected.",
+      ),
+    ).toThrow(/Prohibited app-authored copy/);
+  });
+
+  it.each([
+    ["empty object", {}],
+    [
+      "missing key",
+      { confirmed_match: 0, possible_match: 0, identifier_conflict: 0 },
+    ],
+    [
+      "extra key",
+      {
+        confirmed_match: 0,
+        possible_match: 0,
+        identifier_conflict: 0,
+        vehicle_campaigns_found: 0,
+        other: 0,
+      },
+    ],
+    [
+      "negative",
+      {
+        confirmed_match: -1,
+        possible_match: 0,
+        identifier_conflict: 0,
+        vehicle_campaigns_found: 0,
+      },
+    ],
+    [
+      "NaN",
+      {
+        confirmed_match: Number.NaN,
+        possible_match: 0,
+        identifier_conflict: 0,
+        vehicle_campaigns_found: 0,
+      },
+    ],
+    [
+      "Infinity",
+      {
+        confirmed_match: Number.POSITIVE_INFINITY,
+        possible_match: 0,
+        identifier_conflict: 0,
+        vehicle_campaigns_found: 0,
+      },
+    ],
+    [
+      "fractional",
+      {
+        confirmed_match: 0.5,
+        possible_match: 0,
+        identifier_conflict: 0,
+        vehicle_campaigns_found: 0,
+      },
+    ],
+  ])("refuses %s decision counts", (_label, counts) => {
+    const summary = noMatchSummary();
+
+    expect(() =>
+      formatNoMatchCopy({ ...summary, counts } as never, new Date()),
+    ).toThrow(/decision counts/);
   });
 
   it.each([

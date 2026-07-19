@@ -1,5 +1,5 @@
 import type { ProviderId, RetrievalStatus } from "../providers";
-import type { ScanSummary } from "../results";
+import { RESULT_DECISIONS, type ScanSummary } from "../results";
 
 const REQUIRED_NO_MATCH_DISCLAIMER =
   "This does not establish that the product is safe or unaffected.";
@@ -17,8 +17,9 @@ const PROHIBITED_APP_COPY: readonly RegExp[] = [
   /\breal[- ]time\b/i,
   /\bcomplete coverage\b/i,
   /\bai[- ]verified\b/i,
-  /\b(?:cpsc|fda|nhtsa)[- ]approved\b/i,
-  /\bapproved by (?:cpsc|fda|nhtsa)\b/i,
+  /\b(?:the )?(?:cpsc|fda|nhtsa|food and drug administration|consumer product safety commission|national highway traffic safety administration|agency|government|federal)[- ]approved\b/i,
+  /\bapproved by (?:the )?(?:cpsc|fda|nhtsa|food and drug administration|consumer product safety commission|national highway traffic safety administration|agency|government|federal)\b/i,
+  /\bfederal approval\b/i,
   /\bvin(?:\s+[a-hj-npr-z0-9-]{6,})?\s+(?:has|shows|carries)\s+(?:(?:an?|one or more|no)\s+)?open recalls?\b/i,
   /\b(?:no\s+)?open recalls?\s+(?:for|on)\s+(?:(?:this|your|the|a specific)\s+)?vin\b/i,
   /\bvin(?:\s+[a-hj-npr-z0-9-]{6,})?\s+(?:has|shows|carries)\s+(?:(?:an?|one or more|no)\s+)?unrepaired recalls?\b/i,
@@ -29,8 +30,9 @@ const PROHIBITED_APP_COPY: readonly RegExp[] = [
 function normalizeCopyForPolicy(copy: string): string {
   return copy
     .normalize("NFKC")
-    .replace(/[\s\u00a0]+/gu, " ")
-    .replace(/[\u2010-\u2015\u2212]/gu, "-");
+    .replace(/[\p{Dash_Punctuation}\u2212]/gu, "-")
+    .replace(/\p{Default_Ignorable_Code_Point}/gu, "")
+    .replace(/[\s\u00a0]+/gu, " ");
 }
 
 function hasValidQueryCounts(retrieval: RetrievalStatus): boolean {
@@ -55,7 +57,21 @@ function hasCompleteRetrieval(retrieval: RetrievalStatus): boolean {
 }
 
 function hasOnlyZeroCounts(summary: ScanSummary): boolean {
-  return Object.values(summary.counts).every((count) => count === 0);
+  const counts = summary.counts;
+  if (counts === null || typeof counts !== "object" || Array.isArray(counts)) {
+    return false;
+  }
+
+  const keys = Reflect.ownKeys(counts);
+  return (
+    keys.length === RESULT_DECISIONS.length &&
+    RESULT_DECISIONS.every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(counts, key) &&
+        Number.isInteger(counts[key]) &&
+        counts[key] === 0,
+    )
+  );
 }
 
 export function assertAppCopyAllowed(copy: string): void {
@@ -75,12 +91,12 @@ export function formatNoMatchCopy(
   summary: ScanSummary,
   retrievedAt: Date,
 ): string {
-  if (
-    summary.state !== "no_match_found" ||
-    summary.decisionIds.length > 0 ||
-    !hasOnlyZeroCounts(summary)
-  ) {
+  if (summary.state !== "no_match_found" || summary.decisionIds.length > 0) {
     throw new Error("No-match copy requires a real no-match summary");
+  }
+
+  if (!hasOnlyZeroCounts(summary)) {
+    throw new Error("No-match copy requires exhaustive zero decision counts");
   }
 
   if (!hasValidQueryCounts(summary.retrieval)) {
