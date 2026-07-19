@@ -254,6 +254,27 @@ function assertDecisionProvenance(decision: Record<string, unknown>): void {
   }
 }
 
+function assertDecisionEvidenceBasis(decision: Record<string, unknown>): void {
+  const matched = decision.matchedFields as readonly Record<string, unknown>[];
+  const conflicting = decision.conflictingFields as readonly Record<
+    string,
+    unknown
+  >[];
+  const unknown = decision.unknownFields as readonly unknown[];
+  const invalid =
+    (decision.result === "confirmed_match" &&
+      (matched.length === 0 || conflicting.length !== 0)) ||
+    (decision.result === "identifier_conflict" && conflicting.length === 0) ||
+    (decision.result === "possible_match" &&
+      decision.possibleMatchReason === "user_evidence_missing" &&
+      unknown.length === 0) ||
+    (decision.result === "vehicle_campaigns_found" &&
+      (matched.length === 0 ||
+        conflicting.length !== 0 ||
+        [...matched, ...conflicting].some((field) => field.kind === "vin")));
+  if (invalid) throw new Error("Invalid decision evidence basis");
+}
+
 function validateDecision(decision: unknown): void {
   if (!isRecord(decision)) throw new Error("Invalid decision shape");
   assertDecisionFields(decision);
@@ -271,6 +292,7 @@ function validateDecision(decision: unknown): void {
   }
   assertProviderResultAndActions(decision);
   assertDecisionProvenance(decision);
+  assertDecisionEvidenceBasis(decision);
 }
 
 function validateInput(input: ComposeScanSummaryInput): void {

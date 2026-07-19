@@ -40,7 +40,7 @@ const PROHIBITED_APP_COPY: readonly RegExp[] = [
 function normalizeCopyForPolicy(copy: string): string {
   return copy
     .normalize("NFKC")
-    .replace(/[\p{Dash_Punctuation}\u2212]/gu, "-")
+    .replace(/[\p{Dash_Punctuation}\u2212]/gu, " ")
     .replace(/\p{Default_Ignorable_Code_Point}/gu, "")
     .replace(/[\s\u00a0]+/gu, " ");
 }

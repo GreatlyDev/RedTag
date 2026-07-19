@@ -23,8 +23,6 @@ function decision(
     id,
     providerRecordId: `record-${id}`,
     sourceUrl: `https://example.gov/records/${id}`,
-    conflictingFields: [],
-    unknownFields: [],
     ruleVersion: "foundation-v1",
     limitations: [],
     retrieval: completeRetrieval,
@@ -38,11 +36,13 @@ function decision(
       ...common,
       provider: "nhtsa",
       result,
+      conflictingFields: [],
+      unknownFields: [],
       matchedFields: [
         {
-          kind: "vin",
-          userValue: "1HGCM82633A004352",
-          officialValue: "1HGCM82633A004352",
+          kind: "model",
+          userValue: "ACCORD",
+          officialValue: "ACCORD",
           provenance: { provider: "nhtsa", sourceField: "Results[0].Model" },
         },
       ],
@@ -56,6 +56,8 @@ function decision(
       provider: "cpsc",
       result,
       providerProductEntryId: `entry-${id}`,
+      conflictingFields: [],
+      unknownFields: ["lot_batch"],
       matchedFields: [
         {
           kind: "model",
@@ -78,14 +80,30 @@ function decision(
     provider: "cpsc",
     result,
     providerProductEntryId: `entry-${id}`,
+    conflictingFields:
+      result === "identifier_conflict"
+        ? [
+            {
+              kind: "upc_gtin",
+              userValue: "000",
+              officialValue: "111",
+              provenance: {
+                provider: "cpsc",
+                sourceField: "products.upc",
+                productEntryId: `entry-${id}`,
+              },
+            },
+          ]
+        : [],
+    unknownFields: [],
     matchedFields: [
       {
-        kind: "model",
-        userValue: "MODEL-1",
-        officialValue: "MODEL-1",
+        kind: "upc_gtin",
+        userValue: "00012345678905",
+        officialValue: "00012345678905",
         provenance: {
           provider: "cpsc",
-          sourceField: "products.model_number",
+          sourceField: "products.upc",
           productEntryId: `entry-${id}`,
         },
       },
@@ -758,5 +776,68 @@ describe("composeScanSummary", () => {
         dataMode: "current_query",
       }),
     ).toThrow(/decision retrieval/i);
+  });
+
+  it.each([
+    [
+      "empty confirmed evidence",
+      { ...decision("c", "confirmed_match"), matchedFields: [] },
+    ],
+    [
+      "confirmed conflict",
+      {
+        ...decision("c", "confirmed_match"),
+        conflictingFields: decision("c", "identifier_conflict")
+          .conflictingFields,
+      },
+    ],
+    [
+      "empty conflict evidence",
+      { ...decision("i", "identifier_conflict"), conflictingFields: [] },
+    ],
+    [
+      "empty possible unknowns",
+      { ...decision("p", "possible_match"), unknownFields: [] },
+    ],
+    [
+      "empty campaign evidence",
+      { ...decision("v", "vehicle_campaigns_found"), matchedFields: [] },
+    ],
+    [
+      "VIN campaign evidence",
+      {
+        ...decision("v", "vehicle_campaigns_found"),
+        matchedFields: [
+          {
+            ...decision("v", "vehicle_campaigns_found").matchedFields[0]!,
+            kind: "vin",
+          },
+        ],
+      },
+    ],
+    [
+      "campaign conflict",
+      {
+        ...decision("v", "vehicle_campaigns_found"),
+        conflictingFields: [
+          {
+            kind: "model",
+            userValue: "ACCORD",
+            officialValue: "CIVIC",
+            provenance: { provider: "nhtsa", sourceField: "Results[0].Model" },
+          },
+        ],
+      },
+    ],
+  ])("rejects %s", (_label, forged) => {
+    expect(() =>
+      composeScanSummary({
+        decisions: [forged] as never,
+        retrieval: completeRetrieval,
+        modelState: "model_ready",
+        assistanceMode: "assisted",
+        dataMode: "current_query",
+      }),
+    ).toThrow(/evidence basis/);
   });
 });
