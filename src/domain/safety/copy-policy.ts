@@ -1,4 +1,8 @@
-import type { ProviderId, RetrievalStatus } from "../providers";
+import {
+  assertValidRetrievalStatus,
+  type ProviderId,
+  type RetrievalStatus,
+} from "../providers";
 import { RESULT_DECISIONS, type ScanSummary } from "../results";
 
 const REQUIRED_NO_MATCH_DISCLAIMER =
@@ -20,6 +24,9 @@ const PROHIBITED_APP_COPY: readonly RegExp[] = [
   /\b(?:the )?(?:cpsc|fda|nhtsa|food and drug administration|consumer product safety commission|national highway traffic safety administration|agency|government|federal)[- ]approved\b/i,
   /\bapproved by (?:the )?(?:cpsc|fda|nhtsa|food and drug administration|consumer product safety commission|national highway traffic safety administration|agency|government|federal)\b/i,
   /\bfederal approval\b/i,
+  /\b(?:federally|agency|government) approved\b/i,
+  /\bapproved by (?:an? )?(?:government )?agency\b/i,
+  /\breceived (?:an? )?(?:government )?agency approval\b/i,
   /\bvin(?:\s+[a-hj-npr-z0-9-]{6,})?\s+(?:has|shows|carries)\s+(?:(?:an?|one or more|no)\s+)?open recalls?\b/i,
   /\b(?:no\s+)?open recalls?\s+(?:for|on)\s+(?:(?:this|your|the|a specific)\s+)?vin\b/i,
   /\bvin(?:\s+[a-hj-npr-z0-9-]{6,})?\s+(?:has|shows|carries)\s+(?:(?:an?|one or more|no)\s+)?unrepaired recalls?\b/i,
@@ -33,16 +40,6 @@ function normalizeCopyForPolicy(copy: string): string {
     .replace(/[\p{Dash_Punctuation}\u2212]/gu, "-")
     .replace(/\p{Default_Ignorable_Code_Point}/gu, "")
     .replace(/[\s\u00a0]+/gu, " ");
-}
-
-function hasValidQueryCounts(retrieval: RetrievalStatus): boolean {
-  return (
-    Number.isInteger(retrieval.requiredQueries) &&
-    Number.isInteger(retrieval.completedQueries) &&
-    retrieval.requiredQueries >= 0 &&
-    retrieval.completedQueries >= 0 &&
-    retrieval.completedQueries <= retrieval.requiredQueries
-  );
 }
 
 function hasCompleteRetrieval(retrieval: RetrievalStatus): boolean {
@@ -99,9 +96,7 @@ export function formatNoMatchCopy(
     throw new Error("No-match copy requires exhaustive zero decision counts");
   }
 
-  if (!hasValidQueryCounts(summary.retrieval)) {
-    throw new Error("Retrieval query counts are inconsistent");
-  }
+  assertValidRetrievalStatus(summary.retrieval);
 
   if (
     !hasCompleteRetrieval(summary.retrieval) ||

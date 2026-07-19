@@ -15,20 +15,32 @@ export const RESULT_DECISIONS = [
 ] as const;
 export type ResultDecision = (typeof RESULT_DECISIONS)[number];
 
+export const PRE_EVALUATION_STATES = [
+  "insufficient_identifier",
+  "unsupported",
+] as const;
+export type PreEvaluationState = (typeof PRE_EVALUATION_STATES)[number];
+
+export const POSSIBLE_MATCH_REASONS = [
+  "user_evidence_missing",
+  "record_not_unit_verifiable",
+] as const;
+export type PossibleMatchReason = (typeof POSSIBLE_MATCH_REASONS)[number];
+
+export const ALLOWED_ACTIONS = [
+  "add_evidence",
+  "retry_source",
+  "open_official_source",
+  "open_nhtsa_vin_lookup",
+] as const;
+export type AllowedAction = (typeof ALLOWED_ACTIONS)[number];
+
 export type ScanState =
   | "not_evaluated"
   | ResultDecision
   | "no_match_found"
   | "insufficient_identifier"
   | "unsupported";
-
-export type PossibleMatchReason =
-  "user_evidence_missing" | "record_not_unit_verifiable";
-export type AllowedAction =
-  | "add_evidence"
-  | "retry_source"
-  | "open_official_source"
-  | "open_nhtsa_vin_lookup";
 
 interface DecisionBase<P extends ProviderId> {
   readonly id: string;

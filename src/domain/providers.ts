@@ -7,9 +7,12 @@ export const RETRIEVAL_COMPLETENESS = [
   "unavailable",
 ] as const;
 export type RetrievalCompleteness = (typeof RETRIEVAL_COMPLETENESS)[number];
-export type ModelState = "model_ready" | "model_unavailable";
-export type AssistanceMode = "assisted" | "manual_mode";
-export type DataMode = "current_query" | "recorded_response";
+export const MODEL_STATES = ["model_ready", "model_unavailable"] as const;
+export type ModelState = (typeof MODEL_STATES)[number];
+export const ASSISTANCE_MODES = ["assisted", "manual_mode"] as const;
+export type AssistanceMode = (typeof ASSISTANCE_MODES)[number];
+export const DATA_MODES = ["current_query", "recorded_response"] as const;
+export type DataMode = (typeof DATA_MODES)[number];
 
 export interface RetrievalStatus {
   readonly completeness: RetrievalCompleteness;

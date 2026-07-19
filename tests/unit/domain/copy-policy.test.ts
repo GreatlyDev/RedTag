@@ -43,6 +43,10 @@ describe("app-authored safety copy", () => {
     "National Highway Traffic Safety Administration approved",
     "government approved",
     "agency-approved",
+    "Approved by a government agency",
+    "Approved by an agency",
+    "Federally approved",
+    "Received agency approval",
     "This VIN has an open recall.",
     "VIN 1HGCM82633A004352 has no open recalls.",
     "There is an open recall on this VIN.",
@@ -264,6 +268,24 @@ describe("app-authored safety copy", () => {
     expect(() => formatNoMatchCopy(summary, new Date("invalid"))).toThrow(
       /valid retrieval timestamp/,
     );
+  });
+
+  it.each([
+    ["unknown provider", { fullyCompletedProviderIds: ["other"] }],
+    ["numeric flag", { capped: 0 }],
+    ["malformed provider IDs", { fullyCompletedProviderIds: "cpsc" }],
+  ])("rejects formatter retrieval with %s", (_label, retrievalPatch) => {
+    const summary = noMatchSummary();
+
+    expect(() =>
+      formatNoMatchCopy(
+        {
+          ...summary,
+          retrieval: { ...summary.retrieval, ...retrievalPatch },
+        } as never,
+        new Date(),
+      ),
+    ).toThrow(/Retrieval status/);
   });
 
   it("keeps completed source labels in the summary order", () => {

@@ -701,4 +701,62 @@ describe("composeScanSummary", () => {
       }),
     ).toThrow(/retrieval/i);
   });
+
+  it.each([
+    ["outer model state", { modelState: "other" }],
+    ["outer assistance mode", { assistanceMode: "other" }],
+    ["outer data mode", { dataMode: "other" }],
+    ["unknown pre-evaluation state", { preEvaluationState: "other" }],
+  ])("rejects an unknown %s", (_label, patch) => {
+    expect(() =>
+      composeScanSummary({
+        decisions: [],
+        retrieval: completeRetrieval,
+        modelState: "model_ready",
+        assistanceMode: "assisted",
+        dataMode: "current_query",
+        ...patch,
+      } as never),
+    ).toThrow(/axis|pre-evaluation/i);
+  });
+
+  it.each([
+    ["model state", { modelState: "other" }],
+    ["assistance mode", { assistanceMode: "other" }],
+    ["data mode", { dataMode: "other" }],
+  ])("rejects a decision with an unknown %s", (_label, patch) => {
+    expect(() =>
+      composeScanSummary({
+        decisions: [
+          { ...decision("bad-axis", "confirmed_match"), ...patch },
+        ] as never,
+        retrieval: completeRetrieval,
+        modelState: "model_ready",
+        assistanceMode: "assisted",
+        dataMode: "current_query",
+      }),
+    ).toThrow(/decision.*axis/i);
+  });
+
+  it("rejects a decision without its own completed retrieval query", () => {
+    expect(() =>
+      composeScanSummary({
+        decisions: [
+          {
+            ...decision("no-local-retrieval", "confirmed_match"),
+            retrieval: {
+              ...completeRetrieval,
+              completeness: "unavailable",
+              completedQueries: 0,
+              fullyCompletedProviderIds: [],
+            },
+          },
+        ],
+        retrieval: completeRetrieval,
+        modelState: "model_ready",
+        assistanceMode: "assisted",
+        dataMode: "current_query",
+      }),
+    ).toThrow(/decision retrieval/i);
+  });
 });

@@ -6,16 +6,22 @@ import type {
   RetrievalStatus,
 } from "../providers";
 import { assertValidRetrievalStatus, PROVIDER_IDS } from "../providers";
+import { ASSISTANCE_MODES, DATA_MODES, MODEL_STATES } from "../providers";
 import { IDENTIFIER_KINDS } from "../evidence";
 import type {
-  AllowedAction,
   DecisionCounts,
+  PreEvaluationState,
   RecordDecision,
   ResultDecision,
   ScanState,
   ScanSummary,
 } from "../results";
-import { RESULT_DECISIONS } from "../results";
+import {
+  ALLOWED_ACTIONS,
+  POSSIBLE_MATCH_REASONS,
+  PRE_EVALUATION_STATES,
+  RESULT_DECISIONS,
+} from "../results";
 
 export interface ComposeScanSummaryInput {
   readonly decisions: readonly RecordDecision[];
@@ -23,7 +29,7 @@ export interface ComposeScanSummaryInput {
   readonly modelState: ModelState;
   readonly assistanceMode: AssistanceMode;
   readonly dataMode: DataMode;
-  readonly preEvaluationState?: "insufficient_identifier" | "unsupported";
+  readonly preEvaluationState?: PreEvaluationState;
 }
 
 const RESULT_RANK: Readonly<Record<ResultDecision, number>> = {
@@ -60,13 +66,6 @@ function hasValidCompleteRetrieval(retrieval: RetrievalStatus): boolean {
   );
 }
 
-const ALLOWED_ACTIONS = [
-  "add_evidence",
-  "retry_source",
-  "open_official_source",
-  "open_nhtsa_vin_lookup",
-] as const satisfies readonly AllowedAction[];
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -92,11 +91,8 @@ function isIdentifierKind(value: unknown): boolean {
   return typeof value === "string" && IDENTIFIER_KINDS.includes(value as never);
 }
 
-function isAllowedAction(value: unknown): value is AllowedAction {
-  return (
-    typeof value === "string" &&
-    ALLOWED_ACTIONS.includes(value as AllowedAction)
-  );
+function isAllowedAction(value: unknown): boolean {
+  return typeof value === "string" && ALLOWED_ACTIONS.includes(value as never);
 }
 
 function assertDecisionFields(decision: Record<string, unknown>): void {
@@ -126,9 +122,9 @@ function assertDecisionFields(decision: Record<string, unknown>): void {
 }
 
 function assertPossibleMatchReason(decision: Record<string, unknown>): void {
-  const validReason =
-    decision.possibleMatchReason === "user_evidence_missing" ||
-    decision.possibleMatchReason === "record_not_unit_verifiable";
+  const validReason = POSSIBLE_MATCH_REASONS.includes(
+    decision.possibleMatchReason as never,
+  );
   if (
     decision.result === "possible_match"
       ? !validReason
@@ -263,12 +259,38 @@ function validateDecision(decision: unknown): void {
   assertDecisionFields(decision);
   assertPossibleMatchReason(decision);
   assertValidRetrievalStatus(decision.retrieval);
+  if (decision.retrieval.completedQueries === 0) {
+    throw new Error("A decision retrieval requires a completed query");
+  }
+  if (
+    !MODEL_STATES.includes(decision.modelState as never) ||
+    !ASSISTANCE_MODES.includes(decision.assistanceMode as never) ||
+    !DATA_MODES.includes(decision.dataMode as never)
+  ) {
+    throw new Error("Invalid decision operational axis");
+  }
   assertProviderResultAndActions(decision);
   assertDecisionProvenance(decision);
 }
 
 function validateInput(input: ComposeScanSummaryInput): void {
   const { retrieval } = input;
+  if (!Array.isArray(input.decisions)) {
+    throw new Error("Record decisions must be an array");
+  }
+  if (
+    !MODEL_STATES.includes(input.modelState as never) ||
+    !ASSISTANCE_MODES.includes(input.assistanceMode as never) ||
+    !DATA_MODES.includes(input.dataMode as never)
+  ) {
+    throw new Error("Invalid scan operational axis");
+  }
+  if (
+    input.preEvaluationState !== undefined &&
+    !PRE_EVALUATION_STATES.includes(input.preEvaluationState as never)
+  ) {
+    throw new Error("Invalid pre-evaluation state");
+  }
   assertValidRetrievalStatus(retrieval);
   for (const decision of input.decisions) validateDecision(decision);
 
