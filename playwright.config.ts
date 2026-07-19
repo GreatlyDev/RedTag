@@ -23,8 +23,9 @@ export default defineConfig({
     {
       name: "mobile-chromium",
       use: {
-        ...devices["Desktop Chrome"],
+        ...devices["Pixel 7"],
         viewport: { width: 390, height: 844 },
+        contextOptions: { screen: { width: 390, height: 844 } },
       },
     },
     {
