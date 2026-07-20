@@ -124,6 +124,48 @@ describe("useEvidenceImages", () => {
     expect(revokeUrl).toHaveBeenCalledTimes(1);
   });
 
+  it("does not restore evidence that expires while its batch is unfinished", async () => {
+    vi.useFakeTimers();
+    let finishSecond: ((file: File) => void) | undefined;
+    sanitize
+      .mockImplementationOnce(async () => clean(1))
+      .mockImplementationOnce(
+        () =>
+          new Promise<File>((resolve) => {
+            finishSecond = resolve;
+          }),
+      );
+    render(<Harness />);
+
+    let pending: Promise<void> | undefined;
+    await act(async () => {
+      pending = addFiles?.(
+        [source("first.jpg"), source("second.jpg")],
+        "photos",
+      );
+      await Promise.resolve();
+    });
+    expect(createUrl).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(15 * 60 * 1000);
+    });
+    expect(revokeUrl).toHaveBeenCalledWith("blob:clean-1");
+    expect(revokeUrl).toHaveBeenCalledTimes(1);
+
+    finishSecond?.(clean(2));
+    await act(async () => {
+      await pending;
+    });
+
+    expect(screen.queryByText("Evidence 1")).not.toBeInTheDocument();
+    expect(screen.getByText("Evidence 2")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Evidence 1 expired. Add the photo again or enter details manually.",
+    );
+    expect(revokeUrl).toHaveBeenCalledTimes(1);
+  });
+
   it("retains valid sanitized results while reporting unsupported files", async () => {
     render(<Harness />);
     await act(async () => {

@@ -66,6 +66,7 @@ export function useEvidenceImages(
       const available = Math.max(0, MAX_EVIDENCE_IMAGES - images.length);
       const exceeded = valid.length > available;
       const accepted: EvidenceImage[] = [];
+      let pendingExpiryNotice: string | null = null;
       const cancelOperation = () => {
         const urls = inFlightUrls.current.get(operation);
         if (urls) for (const url of [...urls]) revoke(url);
@@ -96,11 +97,12 @@ export function useEvidenceImages(
             objectUrl,
             setTimeout(() => {
               if (!activeUrls.current.has(objectUrl)) return;
+              pendingExpiryNotice = `${evidence.label} expired. Add the photo again or enter details manually.`;
               revoke(objectUrl);
               dispatch({ type: "image_removed", id: evidence.id });
               dispatch({
                 type: "notice_set",
-                notice: `${evidence.label} expired. Add the photo again or enter details manually.`,
+                notice: pendingExpiryNotice,
               });
             }, REFERENCE_TTL_MS),
           );
@@ -123,20 +125,25 @@ export function useEvidenceImages(
         return;
       }
       inFlightUrls.current.delete(operation);
-      if (accepted.length > 0)
+      const activeAccepted = accepted.filter(({ objectUrl }) =>
+        activeUrls.current.has(objectUrl),
+      );
+      if (activeAccepted.length > 0)
         dispatch({
           type: "images_added",
           inputMode: mode,
-          images: accepted,
+          images: activeAccepted,
           selectionExceeded: exceeded,
         });
       if (unsupported)
         dispatch({ type: "notice_set", notice: unsupportedNotice });
-      else if (exceeded && accepted.length === 0)
+      else if (exceeded && activeAccepted.length === 0)
         dispatch({
           type: "notice_set",
           notice: "Two images maximum. Remove one before adding another.",
         });
+      if (pendingExpiryNotice)
+        dispatch({ type: "notice_set", notice: pendingExpiryNotice });
     },
     [cancelInFlight, dispatch, images.length, revoke],
   );
