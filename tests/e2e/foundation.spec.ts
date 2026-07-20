@@ -92,6 +92,11 @@ test("accepts two gallery images and resets the ephemeral session", async ({
   await expect(page.getByText("Evidence 2")).toBeVisible();
   await page.getByRole("button", { name: "Start over" }).click();
   await expect(page.getByText("No source has been queried yet.")).toBeVisible();
+  await page
+    .getByLabel("Choose one or two product photos")
+    .setInputFiles("tests/fixtures/images/exif-location.jpg");
+  await expect(page.getByText("Evidence 1")).toBeVisible();
+  await expect(page.getByText("Evidence 3")).not.toBeVisible();
 });
 
 test("accepts desktop drop without displaying the source filename", async ({

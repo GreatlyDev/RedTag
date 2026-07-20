@@ -64,7 +64,13 @@ describe("UniversalScan", () => {
   });
 
   it("collects a category confirmation and explains the deterministic routing boundary", () => {
-    render(<UniversalScan />);
+    const view = render(<UniversalScan />);
+    const categoryList = view.container.querySelector("fieldset > ul");
+    expect(categoryList).not.toBeNull();
+    expect(categoryList?.querySelectorAll(":scope > li")).toHaveLength(3);
+    expect(categoryList?.querySelectorAll(":scope > li > label")).toHaveLength(
+      3,
+    );
     const food = screen.getByRole("radio", { name: /Food and infant formula/ });
     fireEvent.click(food);
     expect(food).toBeChecked();

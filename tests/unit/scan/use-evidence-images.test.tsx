@@ -123,6 +123,23 @@ describe("useEvidenceImages", () => {
     expect(revokeUrl).toHaveBeenCalledTimes(1);
   });
 
+  it("restarts generic evidence numbering after a full session reset", async () => {
+    render(<Harness />);
+    await act(async () => {
+      await addFiles?.([source("first-session.jpg")], "photos");
+    });
+
+    act(() => reset?.());
+
+    await act(async () => {
+      await addFiles?.([source("next-session.jpg")], "photos");
+    });
+
+    expect(screen.getByText("Evidence 1")).toBeVisible();
+    expect(screen.queryByText("Evidence 2")).not.toBeInTheDocument();
+    expect(sanitize.mock.calls.map(([, sequence]) => sequence)).toEqual([1, 1]);
+  });
+
   it("expires a sanitized reference within fifteen minutes with neutral recovery", async () => {
     vi.useFakeTimers();
     render(<Harness />);

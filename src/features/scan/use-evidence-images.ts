@@ -69,6 +69,7 @@ export function useEvidenceImages(
       const exceeded = valid.length > available;
       const accepted: EvidenceImage[] = [];
       let preparationFailureNotice: string | null = null;
+      // A prior image can expire while a later sanitizer in this batch is awaited.
       let pendingExpiryNotice: string | null = null;
       const finishPreparing = () => {
         if (mounted.current && operation === generation.current)
@@ -164,6 +165,7 @@ export function useEvidenceImages(
   );
   const clearImages = useCallback(() => {
     generation.current += 1;
+    sequence.current = 0;
     cancelInFlight();
     for (const url of [...activeUrls.current]) revoke(url);
     setIsPreparing(false);

@@ -5,6 +5,7 @@ import styles from "./page.module.css";
 import { APP_NAME } from "./product-copy";
 
 export default async function HomePage() {
+  // Intentional: request-scoped CSP nonces require dynamic rendering.
   await connection();
   return (
     <div className={styles.shell}>

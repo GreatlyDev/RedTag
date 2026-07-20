@@ -38,24 +38,26 @@ export function CategorySelector({
   return (
     <fieldset aria-describedby="category-routing-note">
       <legend>Which kind of item are you checking?</legend>
-      <div role="list">
+      <ul>
         {CATEGORIES.map((category) => (
-          <label key={category.id} role="listitem">
-            <input
-              type="radio"
-              name="product-category"
-              value={category.id}
-              checked={selected === category.id}
-              onChange={() => onSelect(category.id)}
-            />
-            <span aria-hidden="true">{category.marker}</span>
-            <span>
-              <strong>{category.label}</strong>
-              <small>{category.scope}</small>
-            </span>
-          </label>
+          <li key={category.id}>
+            <label>
+              <input
+                type="radio"
+                name="product-category"
+                value={category.id}
+                checked={selected === category.id}
+                onChange={() => onSelect(category.id)}
+              />
+              <span aria-hidden="true">{category.marker}</span>
+              <span>
+                <strong>{category.label}</strong>
+                <small>{category.scope}</small>
+              </span>
+            </label>
+          </li>
         ))}
-      </div>
+      </ul>
       <p id="category-routing-note">
         Deterministic routing uses your confirmed category to determine the
         eligible official source before any query. You can change it first.
