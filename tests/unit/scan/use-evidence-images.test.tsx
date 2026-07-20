@@ -157,6 +157,19 @@ describe("useEvidenceImages", () => {
     expect(createUrl).not.toHaveBeenCalled();
   });
 
+  it("keeps completed state previews when a later addition starts", async () => {
+    render(<Harness />);
+    await act(async () => {
+      await addFiles?.([source("first.jpg")], "photos");
+    });
+    await act(async () => {
+      await addFiles?.([source("second.jpg")], "photos");
+    });
+
+    expect(screen.getByText("Evidence 1")).toBeVisible();
+    expect(screen.getByText("Evidence 2")).toBeVisible();
+    expect(revokeUrl).not.toHaveBeenCalled();
+  });
   it("cancels rapid overlap and retains only the latest selection", async () => {
     let finish: ((file: File) => void) | undefined;
     sanitize.mockImplementationOnce(
@@ -180,8 +193,10 @@ describe("useEvidenceImages", () => {
     expect(createUrl).toHaveBeenCalledTimes(1);
   });
 
-  it("revokes previews accumulated before an overlapping selection cancels them", async () => {
+  it("immediately revokes an unfinished operation's previews and timers on overlap", async () => {
     let finishSecond: ((file: File) => void) | undefined;
+    let finishLatest: ((file: File) => void) | undefined;
+    const clearTimer = vi.spyOn(globalThis, "clearTimeout");
     sanitize
       .mockImplementationOnce(async () => clean(1))
       .mockImplementationOnce(
@@ -190,22 +205,39 @@ describe("useEvidenceImages", () => {
             finishSecond = resolve;
           }),
       )
-      .mockImplementationOnce(async () => clean(3));
+      .mockImplementationOnce(
+        () =>
+          new Promise<File>((resolve) => {
+            finishLatest = resolve;
+          }),
+      );
     const view = render(<Harness />);
     const first = addFiles?.(
       [source("first.jpg"), source("second.jpg")],
       "photos",
     );
     await waitFor(() => expect(createUrl).toHaveBeenCalledTimes(1));
-    await act(async () => {
-      await addFiles?.([source("latest.jpg")], "photos");
-    });
+    const clearedTimersBeforeOverlap = clearTimer.mock.calls.length;
+
+    const latest = addFiles?.([source("latest.jpg")], "photos");
+
+    expect(revokeUrl).toHaveBeenCalledWith("blob:clean-1");
+    expect(revokeUrl).toHaveBeenCalledTimes(1);
+    expect(clearTimer).toHaveBeenCalledTimes(clearedTimersBeforeOverlap + 1);
+    expect(
+      within(view.container).queryByText("Evidence 1"),
+    ).not.toBeInTheDocument();
+
     finishSecond?.(clean(2));
     await act(async () => {
       await first;
     });
-    expect(revokeUrl).toHaveBeenCalledWith("blob:clean-1");
     expect(revokeUrl).toHaveBeenCalledTimes(1);
+
+    finishLatest?.(clean(3));
+    await act(async () => {
+      await latest;
+    });
     expect(within(view.container).getByText("Evidence 3")).toBeVisible();
   });
 

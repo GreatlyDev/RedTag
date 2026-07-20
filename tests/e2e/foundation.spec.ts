@@ -55,6 +55,19 @@ test("exposes the foundation contract without serious accessibility findings", a
   ).toEqual([]);
 });
 
+test("uses the intended sans interface typography", async ({ page }) => {
+  await page.goto("/");
+  const fonts = await page.evaluate(() => ({
+    body: getComputedStyle(document.body).fontFamily,
+    button: getComputedStyle(
+      document.querySelector<HTMLButtonElement>("button")!,
+    ).fontFamily,
+  }));
+
+  expect(fonts.body.toLowerCase()).not.toContain("times new roman");
+  expect(fonts.body).toMatch(/Geist|Inter|system-ui/i);
+  expect(fonts.button).toBe(fonts.body);
+});
 test("accepts two gallery images and resets the ephemeral session", async ({
   page,
 }) => {
