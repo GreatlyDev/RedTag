@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { connection } from "next/server";
+import { UniversalScan } from "@/features/scan/universal-scan";
 import styles from "./page.module.css";
-import { APP_NAME, APP_PROMISE } from "./product-copy";
+import { APP_NAME } from "./product-copy";
 
-export default function HomePage() {
+export default async function HomePage() {
+  await connection();
   return (
     <div className={styles.shell}>
       <header className={styles.masthead}>
@@ -11,18 +14,8 @@ export default function HomePage() {
         </Link>
         <span className={styles.scope}>U.S. recall record guide</span>
       </header>
-      <main>
-        <section
-          id="scan"
-          className={styles.hero}
-          aria-labelledby="scan-heading"
-        >
-          <p className={styles.eyebrow}>Universal Scan</p>
-          <h1 id="scan-heading">Evidence first. Answers you can trace.</h1>
-          <p>{APP_PROMISE}</p>
-          <button type="button">Scan with camera</button>
-          <button type="button">Choose from photos</button>
-        </section>
+      <main id="scan">
+        <UniversalScan />
       </main>
     </div>
   );
