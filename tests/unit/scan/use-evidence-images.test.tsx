@@ -13,7 +13,10 @@ import {
   initialScanSession,
   scanReducer,
 } from "@/features/scan/model/scan-reducer";
-import { sanitizeClientImage } from "@/features/scan/sanitize-client-image";
+import {
+  ClientImageError,
+  sanitizeClientImage,
+} from "@/features/scan/sanitize-client-image";
 import { useEvidenceImages } from "@/features/scan/use-evidence-images";
 
 vi.mock("@/features/scan/sanitize-client-image", () => ({
@@ -56,6 +59,16 @@ function Harness() {
         </div>
       ))}
       {state.notice ? <span role="status">{state.notice}</span> : null}
+      <span data-testid="stage">{state.stage}</span>
+      <span data-testid="input-mode">{state.inputMode ?? "none"}</span>
+      <button
+        onClick={() => {
+          dispatch({ type: "manual_value_changed", value: "ABC-123" });
+          dispatch({ type: "manual_submitted" });
+        }}
+      >
+        Submit manual fixture
+      </button>
       <button onClick={controller.clearImages}>Clear</button>
     </div>
   );
@@ -67,6 +80,9 @@ const clean = (sequence: number) =>
     type: "image/jpeg",
     lastModified: 0,
   });
+const decodeNotice =
+  "This HEIC photo could not be decoded. Try another photo or enter details manually.";
+const decodeFailure = () => new ClientImageError(decodeNotice);
 
 describe("useEvidenceImages", () => {
   beforeEach(() => {
@@ -179,6 +195,85 @@ describe("useEvidenceImages", () => {
       "Some files were unsupported",
     );
     expect(sanitize).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains a preparation failure notice when another image succeeds", async () => {
+    sanitize
+      .mockRejectedValueOnce(decodeFailure())
+      .mockResolvedValueOnce(clean(2));
+    render(<Harness />);
+
+    await act(async () => {
+      await addFiles?.(
+        [source("failed.heic", "image/heic"), source("valid.jpg")],
+        "photos",
+      );
+    });
+
+    expect(screen.getByText("Evidence 2")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(decodeNotice);
+  });
+
+  it("keeps unsupported-format recovery ahead of decode failures", async () => {
+    sanitize.mockRejectedValueOnce(decodeFailure());
+    render(<Harness />);
+
+    await act(async () => {
+      await addFiles?.(
+        [
+          source("failed.heic", "image/heic"),
+          source("notes.txt", "text/plain"),
+        ],
+        "photos",
+      );
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Some files were unsupported",
+    );
+  });
+
+  it("keeps decode recovery ahead of the image-limit notice", async () => {
+    sanitize
+      .mockRejectedValueOnce(decodeFailure())
+      .mockResolvedValueOnce(clean(2));
+    render(<Harness />);
+
+    await act(async () => {
+      await addFiles?.(
+        [
+          source("failed.heic", "image/heic"),
+          source("valid.jpg"),
+          source("third.jpg"),
+        ],
+        "photos",
+      );
+    });
+
+    expect(screen.getByText("Evidence 2")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(decodeNotice);
+  });
+
+  it("restores submitted manual evidence when the last image expires", async () => {
+    vi.useFakeTimers();
+    render(<Harness />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Submit manual fixture" }),
+    );
+    await act(async () => {
+      await addFiles?.([source()], "photos");
+    });
+    expect(screen.getByTestId("stage")).toHaveTextContent("understand");
+
+    await act(async () => {
+      vi.advanceTimersByTime(15 * 60 * 1000);
+    });
+
+    expect(screen.getByTestId("stage")).toHaveTextContent("complete_proof");
+    expect(screen.getByTestId("input-mode")).toHaveTextContent("manual");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Evidence 1 expired. Add the photo again or enter details manually.",
+    );
   });
 
   it("cancels an in-flight selection on reset without creating a URL", async () => {

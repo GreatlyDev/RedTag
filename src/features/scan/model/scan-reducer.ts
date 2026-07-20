@@ -9,6 +9,7 @@ export function initialScanSession(): ScanSessionState {
     imageInputMode: null,
     images: [],
     manualValue: "",
+    manualSubmitted: false,
     selectedCategory: null,
     notice: null,
   };
@@ -37,32 +38,33 @@ export function scanReducer(
     }
     case "image_removed": {
       const images = state.images.filter(({ id }) => id !== action.id);
-      const noEvidence = images.length === 0 && state.manualValue.trim() === "";
+      const hasImages = images.length > 0;
+      const hasSubmittedManual =
+        state.manualSubmitted && state.manualValue.trim() !== "";
       return {
         ...state,
         images,
-        stage: noEvidence
-          ? "capture"
-          : images.length > 0
-            ? "understand"
-            : state.stage,
-        inputMode: noEvidence
-          ? null
-          : images.length > 0
-            ? state.imageInputMode
-            : state.inputMode,
-        imageInputMode: images.length === 0 ? null : state.imageInputMode,
+        stage: hasImages
+          ? "understand"
+          : hasSubmittedManual
+            ? "complete_proof"
+            : "capture",
+        inputMode: hasImages
+          ? state.imageInputMode
+          : hasSubmittedManual
+            ? "manual"
+            : null,
+        imageInputMode: hasImages ? state.imageInputMode : null,
         notice: null,
       };
     }
     case "manual_value_changed": {
       const manualValue = action.value;
-      if (manualValue.trim() !== "")
-        return { ...state, manualValue, notice: null };
       return state.images.length > 0
         ? {
             ...state,
             manualValue,
+            manualSubmitted: false,
             stage: "understand",
             inputMode: state.imageInputMode,
             notice: null,
@@ -70,8 +72,10 @@ export function scanReducer(
         : {
             ...state,
             manualValue,
+            manualSubmitted: false,
             stage: "capture",
             inputMode: null,
+            imageInputMode: null,
             notice: null,
           };
     }
@@ -83,10 +87,12 @@ export function scanReducer(
             stage: "complete_proof",
             inputMode: "manual",
             manualValue,
+            manualSubmitted: true,
             notice: null,
           }
         : {
             ...state,
+            manualSubmitted: false,
             notice: "Enter a model, UPC or GTIN, lot code, date, or VIN.",
           };
     }

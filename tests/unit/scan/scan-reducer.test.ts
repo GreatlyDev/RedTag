@@ -121,6 +121,51 @@ describe("scanReducer", () => {
     });
   });
 
+  it("restores submitted manual evidence when the final image is removed", () => {
+    const submitted = scanReducer(
+      scanReducer(initialScanSession(), {
+        type: "manual_value_changed",
+        value: "ABC-123",
+      }),
+      { type: "manual_submitted" },
+    );
+    const withImage = scanReducer(submitted, {
+      type: "images_added",
+      inputMode: "photos",
+      images: [image("1")],
+    });
+    const removed = scanReducer(withImage, { type: "image_removed", id: "1" });
+
+    expect(removed).toMatchObject({
+      stage: "complete_proof",
+      inputMode: "manual",
+      imageInputMode: null,
+      manualValue: "ABC-123",
+      manualSubmitted: true,
+    });
+  });
+
+  it("does not promote an unsubmitted manual draft after image removal", () => {
+    const draft = scanReducer(initialScanSession(), {
+      type: "manual_value_changed",
+      value: "ABC-123",
+    });
+    const withImage = scanReducer(draft, {
+      type: "images_added",
+      inputMode: "camera",
+      images: [image("1")],
+    });
+    const removed = scanReducer(withImage, { type: "image_removed", id: "1" });
+
+    expect(removed).toMatchObject({
+      stage: "capture",
+      inputMode: null,
+      imageInputMode: null,
+      manualValue: "ABC-123",
+      manualSubmitted: false,
+    });
+  });
+
   it("preserves the active image mode when one image remains", () => {
     const withImages = scanReducer(initialScanSession(), {
       type: "images_added",

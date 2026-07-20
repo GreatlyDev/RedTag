@@ -16,11 +16,12 @@ export function UniversalScan() {
   const [manualOpen, setManualOpen] = useState(false);
   const cameraInput = useRef<HTMLInputElement>(null);
   const photosInput = useRef<HTMLInputElement>(null);
-  const { addFiles, removeImage, clearImages } = useEvidenceImages(
+  const { addFiles, removeImage, clearImages, isPreparing } = useEvidenceImages(
     state.images,
     dispatch,
   );
   const status =
+    (isPreparing ? "Preparing photo. No source has been queried yet." : null) ??
     state.notice ??
     (state.stage === "complete_proof"
       ? "Details ready for evidence review. No source has been queried yet."
@@ -45,6 +46,7 @@ export function UniversalScan() {
           className={styles.dropZone}
           role="group"
           aria-label="Photo upload and drop area"
+          aria-busy={isPreparing}
           onDragOver={(event) => {
             event.preventDefault();
             event.dataTransfer.dropEffect = "copy";

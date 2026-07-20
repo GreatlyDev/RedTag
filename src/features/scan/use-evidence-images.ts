@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MAX_EVIDENCE_IMAGES } from "./model/scan-reducer";
 import type {
   EvidenceImage,
@@ -32,6 +32,7 @@ export function useEvidenceImages(
   images: readonly EvidenceImage[],
   dispatch: Dispatch,
 ) {
+  const [isPreparing, setIsPreparing] = useState(false);
   const mounted = useRef(true);
   const generation = useRef(0);
   const sequence = useRef(0);
@@ -58,6 +59,7 @@ export function useEvidenceImages(
   const addFiles = useCallback(
     async (files: readonly File[], mode: ImageInputMode) => {
       const operation = ++generation.current;
+      setIsPreparing(true);
       cancelInFlight();
       const operationUrls = new Set<string>();
       inFlightUrls.current.set(operation, operationUrls);
@@ -66,7 +68,12 @@ export function useEvidenceImages(
       const available = Math.max(0, MAX_EVIDENCE_IMAGES - images.length);
       const exceeded = valid.length > available;
       const accepted: EvidenceImage[] = [];
+      let preparationFailureNotice: string | null = null;
       let pendingExpiryNotice: string | null = null;
+      const finishPreparing = () => {
+        if (mounted.current && operation === generation.current)
+          setIsPreparing(false);
+      };
       const cancelOperation = () => {
         const urls = inFlightUrls.current.get(operation);
         if (urls) for (const url of [...urls]) revoke(url);
@@ -78,6 +85,7 @@ export function useEvidenceImages(
           const sanitizedFile = await sanitizeClientImage(file, nextSequence);
           if (!mounted.current || operation !== generation.current) {
             cancelOperation();
+            finishPreparing();
             return;
           }
           const objectUrl = URL.createObjectURL(sanitizedFile);
@@ -109,19 +117,18 @@ export function useEvidenceImages(
         } catch (error) {
           if (!mounted.current || operation !== generation.current) {
             cancelOperation();
+            finishPreparing();
             return;
           }
-          dispatch({
-            type: "notice_set",
-            notice:
-              error instanceof ClientImageError
-                ? error.message
-                : "The browser could not prepare that image. Try another photo or enter details manually.",
-          });
+          preparationFailureNotice ??=
+            error instanceof ClientImageError
+              ? error.message
+              : "The browser could not prepare that image. Try another photo or enter details manually.";
         }
       }
       if (!mounted.current || operation !== generation.current) {
         cancelOperation();
+        finishPreparing();
         return;
       }
       inFlightUrls.current.delete(operation);
@@ -135,15 +142,15 @@ export function useEvidenceImages(
           images: activeAccepted,
           selectionExceeded: exceeded,
         });
-      if (unsupported)
-        dispatch({ type: "notice_set", notice: unsupportedNotice });
-      else if (exceeded && activeAccepted.length === 0)
-        dispatch({
-          type: "notice_set",
-          notice: "Two images maximum. Remove one before adding another.",
-        });
-      if (pendingExpiryNotice)
-        dispatch({ type: "notice_set", notice: pendingExpiryNotice });
+      const finalNotice =
+        pendingExpiryNotice ??
+        (unsupported ? unsupportedNotice : null) ??
+        preparationFailureNotice ??
+        (exceeded
+          ? "Two images maximum. Remove one before adding another."
+          : null);
+      if (finalNotice) dispatch({ type: "notice_set", notice: finalNotice });
+      finishPreparing();
     },
     [cancelInFlight, dispatch, images.length, revoke],
   );
@@ -159,6 +166,7 @@ export function useEvidenceImages(
     generation.current += 1;
     cancelInFlight();
     for (const url of [...activeUrls.current]) revoke(url);
+    setIsPreparing(false);
     dispatch({ type: "reset" });
   }, [cancelInFlight, dispatch, revoke]);
 
@@ -173,5 +181,5 @@ export function useEvidenceImages(
     };
   }, [cancelInFlight, revoke]);
 
-  return { addFiles, removeImage, clearImages };
+  return { addFiles, removeImage, clearImages, isPreparing };
 }

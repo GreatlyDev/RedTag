@@ -21,6 +21,7 @@ export interface ScanSessionState {
   readonly imageInputMode: ImageInputMode | null;
   readonly images: readonly EvidenceImage[];
   readonly manualValue: string;
+  readonly manualSubmitted: boolean;
   readonly selectedCategory: ProductCategory | null;
   readonly notice: string | null;
 }

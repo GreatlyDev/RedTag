@@ -47,6 +47,11 @@ test("exposes the foundation contract without serious accessibility findings", a
     await expect(action).toBeInViewport({ ratio: 1 });
   }
 
+  await expect(page.getByLabel("Take a product photo")).toHaveAttribute(
+    "capture",
+    "environment",
+  );
+
   const report = await new AxeBuilder({ page }).analyze();
   expect(
     report.violations.filter(
