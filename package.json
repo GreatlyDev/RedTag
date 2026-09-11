@@ -43,6 +43,6 @@
     "pin-github-action": "3.5.1",
     "prettier": "3.9.5",
     "typescript": "6.0.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   }
 }
